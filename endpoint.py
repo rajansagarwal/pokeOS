@@ -2,6 +2,9 @@
 import os
 from fastmcp import FastMCP
 from local_mcp.computeruse import send_to_nova
+import dotenv
+
+dotenv.load_dotenv()
 
 mcp = FastMCP("Sample MCP Server")
 
