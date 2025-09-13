@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 from fastmcp import FastMCP
+from computeruse import send_to_nova
 
 mcp = FastMCP("Sample MCP Server")
 
@@ -17,6 +18,10 @@ def get_server_info() -> dict:
         "python_version": os.sys.version.split()[0]
     }
 
+@mcp.tool(description="Send a task to a web agent to find some information. Use this for harder tasks that require live scraping, not regular web search")
+def web_agent(task: str, website: str) -> str:
+    return send_to_nova(task, website)
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     host = "0.0.0.0"
@@ -24,7 +29,7 @@ if __name__ == "__main__":
     print(f"Starting FastMCP server on {host}:{port}")
     
     mcp.run(
-        transport="http",
+        transport="sse",
         host=host,
         port=port
     )

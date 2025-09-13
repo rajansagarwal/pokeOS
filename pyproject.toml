@@ -9,6 +9,7 @@ dependencies = [
     "fastapi>=0.116.1",
     "fastmcp==2.12.3",
     "mcp>=1.14.0",
+    "nova-act>=2.0.357.0",
     "osxphotos>=0.73.0",
     "python-dotenv>=1.1.1",
     "requests>=2.32.5",
