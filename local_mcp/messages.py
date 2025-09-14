@@ -15,7 +15,7 @@ if not OPENAI_API_KEY:
 # ================== Config ==================
 DEFAULT_DB_PATH   = os.path.expanduser("~/Library/Messages/chat.db")
 SNAPSHOT_DIR      = os.path.expanduser("~/Library/Messages/_snapshots")
-DEFAULT_CONTACTS  = os.path.expanduser("~/.contacts_cache.txt")
+DEFAULT_CONTACTS  = os.path.join(os.path.dirname(__file__), "lib", ".contacts_cache.txt")
 RECENT_CHATS      = 20
 MESSAGES_PER_CHAT = 30
 

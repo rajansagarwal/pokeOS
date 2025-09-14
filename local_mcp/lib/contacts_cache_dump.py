@@ -2,17 +2,20 @@ import subprocess, os, sys, argparse, pathlib
 
 APPLE_SCRIPT = r'''
 tell application "Contacts"
-  set out to ""
+  set contactList to {}
   repeat with p in people
     set pname to (name of p as string)
     repeat with ph in phones of p
-      set out to out & pname & "||phone||" & (value of ph as string) & linefeed
+      set end of contactList to pname & "||phone||" & (value of ph as string)
     end repeat
     repeat with em in emails of p
-      set out to out & pname & "||email||" & (value of em as string) & linefeed
+      set end of contactList to pname & "||email||" & (value of em as string)
     end repeat
   end repeat
-  return out
+  set AppleScript's text item delimiters to "\n"
+  set result to contactList as string
+  set AppleScript's text item delimiters to ""
+  return result
 end tell
 '''
 
@@ -27,11 +30,15 @@ def dump_contacts_lines(timeout_sec: int = 60) -> list[str]:
 
 def main():
     ap = argparse.ArgumentParser(description="Dump Apple Contacts to text cache (Name||phone||... / Name||email||...)")
-    ap.add_argument("--out", default=os.path.expanduser("~/.contacts_cache.txt"),
-                    help="Output path for the contacts cache (default: ~/.contacts_cache.txt)")
+    script_dir = pathlib.Path(__file__).parent
+    default_cache = script_dir / ".contacts_cache.txt"
+    ap.add_argument("--out", default=str(default_cache),
+                    help=f"Output path for the contacts cache (default: {default_cache})")
+    ap.add_argument("--timeout", type=int, default=600,
+                    help="Timeout in seconds for AppleScript execution (default: 600)")
     args = ap.parse_args()
 
-    lines = dump_contacts_lines()
+    lines = dump_contacts_lines(timeout_sec=args.timeout)
     out_path = pathlib.Path(args.out).expanduser()
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text("\n".join(lines), encoding="utf-8")

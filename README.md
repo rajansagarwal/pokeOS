@@ -9,7 +9,7 @@ Make sure to create your venv and install the requirements.txt file.
 The script is based on the `contacts_cache_dump.py` script located in the local_mcp/lib directory. You must first run the following to store a local copy of your contacts on your filesystem.
 
 ```bash
-python3 local_mcp/lib/contacts_cache_dump.py --out ~/.contacts_cache.txt
+python3 local_mcp/lib/contacts_cache_dump.py
 ```
 
 To run the script, use the following command:
@@ -43,7 +43,7 @@ python messages.py --query "nyc trip with rajan" --k 5 --pretty
 To index the messages, use the following command:
 
 ```bash
-python messages.py --index --dbdir ~/.chat_memdb --contacts ~/.contacts_cache.txt
+python messages.py --index --dbdir ~/.chat_memdb
 ```
 
 Note that this creates a new snapshot of the chat.db iMessage database and stores it in the ~/.chat_memdb directory. 
