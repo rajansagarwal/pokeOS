@@ -25,13 +25,23 @@ python messages.py --text "yo" --limit 5
 ```
 
 ```bash
-python msg_withvec_llm.py --context "coordinate with Rajan about an nyc trip" --ctx_k 6 --ctx_threads 3 --dbdir ~/.chat_memdb --table messages
+python messages.py --context "coordinate with Rajan about an nyc trip" --ctx_k 6 --ctx_threads 3 --dbdir ~/.chat_memdb --table messages
+```
+
+Context: uses the prompt to fetch relevant threads of texts so like a chain of messages/multiple messages
+```bash
+python messages.py --context "coordinate with Rajan about an nyc trip" --ctx_threads 2 --ctx_k 8
+```
+
+Query: uses the prompt to fetch relevant messages of texts so like a single message
+```bash
+python messages.py --query "nyc trip with rajan" --k 5 --pretty
 ```
 
 To index the messages, use the following command:
 
 ```bash
-python msg_withvec_llm.py --index --dbdir ~/.chat_memdb --contacts ~/.contacts_cache.txt
+python messages.py --index --dbdir ~/.chat_memdb --contacts ~/.contacts_cache.txt
 ```
 
 
