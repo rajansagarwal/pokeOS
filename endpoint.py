@@ -6,7 +6,7 @@ from local_mcp.computeruse import send_to_nova
 from local_mcp.cursor_background import launch_agent, get_agent_status, get_agent_conversation, add_agent_followup, list_repositories, run_agent, check_agent, send_followup, show_conversation, show_repos
 from local_mcp.music import play_liked_songs as _play_liked_songs
 from local_mcp.cursor_cli import send_poke_message, run_command, run_cursor_agent, list_files, cat_file
-from local_mcp.messages import retrieve_text, suggest_next_message_from_prompt, _get_store
+from local_mcp.messages import retrieve_text, suggest_next_message_from_prompt, _get_store, reindex_messages
 import dotenv
 
 dotenv.load_dotenv()
@@ -190,6 +190,37 @@ def get_relevant_context(
         return {"context": context}
     except Exception as e:
         return {"error": f"Error retrieving context: {str(e)}"}
+
+@mcp.tool(description="Revalidate and reindex recent messages into the LanceDB vector database.")
+def revalidate_message_index(
+    contacts: Optional[str] = None,
+    chats: int = 20,
+    messages_per_chat: int = 30,
+    dbdir: Optional[str] = None,
+    table: Optional[str] = None
+) -> dict:
+    """
+    Revalidate and reindex recent messages into LanceDB. This refreshes the vector database
+    with the latest messages for improved search and context retrieval.
+    
+    Args:
+        contacts: Path to contacts cache file (optional, uses default if not provided)
+        chats: Number of recent chats to index (default: 20)
+        messages_per_chat: Number of messages per chat to index (default: 30)
+        dbdir: LanceDB directory path (optional, uses default if not provided)
+        table: LanceDB table name (optional, uses default if not provided)
+    """
+    try:
+        result = reindex_messages(
+            contacts=contacts,
+            chats=chats,
+            per=messages_per_chat,
+            dbdir=dbdir,
+            table=table
+        )
+        return result
+    except Exception as e:
+        return {"success": False, "error": f"Error during reindexing: {str(e)}"}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))

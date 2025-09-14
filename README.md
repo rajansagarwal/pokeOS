@@ -1,102 +1,107 @@
 # poke-desktop
 
-### Poke for iMessage
+Local MCP server providing Poke with 5 core capabilities for enhanced digital interaction through iMessage intelligence, web automation, development tools, system control, and music integration.
 
-Snapshot your local iMessage DB, index recent chats into LanceDB (OpenAI embeddings), and **answer questions or draft paste-ready replies**. 
+## Core Capabilities
 
-The `local_mcp` directory contains a Python script that reads recent messages from the Messages database and converts them into a JSON format that can be used by the MCP. The script uses a contacts cache to resolve phone numbers and email addresses to names.
+### 1. iMessage Intelligence
+Proactive message analysis with vector search and LLM interpretation. Indexes messages into LanceDB with OpenAI embeddings for semantic search, context retrieval, and automated monitoring of unreplied conversations.
 
-### Setup
+### 2. Web Agent Integration
+Automated web interaction through Nova agents for form filling and meeting scheduling. Processes emails and executes actionable items using local browser automation instead of relying on web search alone.
+
+### 3. Cursor IDE Integration
+Direct code debugging and development assistance within your IDE. Launches background agents, manages repositories, and provides conversational interface for development tasks.
+
+### 4. System Command Execution
+Generalized command runner with intelligent AppleScript integration for macOS automation. Handles terminal commands, system settings, wellness automation, and file operations.
+
+## Setup
+
+### Prerequisites
+Python 3.13+, uv package manager, Tailscale, and macOS Full Disk Access permissions.
+
+### Installation
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+# Install dependencies
+uv sync
+
+# Setup contacts cache for name resolution (optional)
+python local_mcp/scripts/contacts_cache_dump.py
+
+# Grant permissions first (see Permissions section below)
+
+# Initial message indexing  
+cd local_mcp
+python messages.py --index --chats 20 --per 30 --dbdir ~/.chat_memdb
+```
+
+This creates:
+- Contacts cache at `~/.contacts_cache.txt` 
+- Message snapshots in `~/Library/Messages/_snapshots/`
+- Vector database at `~/.chat_memdb`
+
+### Running the MCP Server
+
+```bash
+# Start the local MCP server
+uv run endpoint.py
+
+# In another terminal, create secure public tunnel
+tailscale funnel --https=443 --set-path=/mcp "localhost:8000/mcp"
+```
+
+The server will be available locally at `http://localhost:8000/mcp` and publicly via your Tailscale funnel URL.
+
+### Environment Variables
+
+Create a `.env` file with:
+```bash
+OPENAI_API_KEY=your_openai_api_key
+POKE_API_KEY=your_poke_api_key
+WORKING_DIRECTORY=/path/to/your/projects
 ```
 
 ### Permissions
 
-You will need to make sure that your IDE/Terminal has Full Disk Access permissions to access the iMessage database. You can do this by going to System Settings > Security & Privacy > Privacy > Full Disk Access and adding your IDE/Terminal to the list.
+**Required for iMessage database access:**
 
-Additionally, if you're using the Contacts Cache, you will need to make sure that your IDE/Terminal has access to your Contacts.
+1. **Full Disk Access**: System Settings > Security & Privacy > Privacy > Full Disk Access
+   - Add Terminal.app, your IDE (VS Code, etc.), and Python executable
+2. **Contacts Access**: For name resolution instead of phone numbers/emails
+   - Add same applications to Contacts privacy settings
 
-### Contacts Cache
+**iMessage Database Location**: `~/Library/Messages/chat.db`
+- Must be readable by your terminal/Python process
+- Without permissions, indexing will fail with access denied errors
 
-To map phone/emails → names, create ~/.contacts_cache.txt using the `contacts_cache_dump.py` script located in the local_mcp/scripts directory. You must first run the following to store a local copy of your contacts on your filesystem.
+## MCP Tools Available
 
-```bash
-python3 local_mcp/scripts/contacts_cache_dump.py
-```
+The server exposes the following tools to Poke via MCP:
 
-If missing, results still work, senders just appear as raw handles.
+**Message Intelligence**: `retrieve_messages_text`, `suggest_message_context`, `get_relevant_context`, `revalidate_message_index`
 
-### First Run
+**System & Web**: `web_agent`, `run_shell_command`, `play_spotify_liked_songs`
 
-Index recent iMessage history to LanceDB (with optional arguments):
+**Development**: `cursor_launch_agent`, `cursor_get_agent_status`, `list_directory_files`, `read_file_contents`
 
-```bash
-python messages.py \
-  --index \
-  --chats 40 \
-  --per 60 \
-  --dbdir ~/.chat_memdb \
-  --table messages
-```
+**Proactive**: `proactive_message_check` for automated unreplied message scanning
 
-This snapshots `~/Library/Messages/chat.db` into `~/Library/Messages/_snapshots/` and upserts into `~/.chat_memdb`.
+## Architecture
 
-### CLI Usage
+The system uses a local MCP server funneled through Tailscale SSL to provide secure remote access. This approach enables Poke to access local system capabilities while maintaining security through Tailscale's mesh networking.
 
-> Note: All commands accept --pretty for pretty-printed JSON.
+Key components: LanceDB vector store, FastMCP server, Tailscale SSL tunnel, custom memory system, and cron-based proactive monitoring.
 
-a) Dump recent conversations (no DB needed)
+This setup was instrumental in helping Poke debug its own Spotify integration locally, demonstrating the meta-capabilities of the system.
+
+## Automation
 
 ```bash
-python messages.py --pretty > recent.json
-```
+# Reindex messages
+cd local_mcp && python messages.py --index
 
-b) Plain substring search (exact, case-insensitive)
-
-```bash
-# Find "Thanksgiving" with small context window
-python messages.py --text "Thanksgiving" --window 2 --pretty
-
-# Filter by chat and time range
-python messages.py \
-  --text "Turkey" \
-  --inchat "Random Groupchat" \
-  --since 2025-09-01 \
-  --until 2025-09-30 \
-  --window 3 \
-  --pretty
-```
-
-c) Semantic search (embedding similarity)
-
-Query argument uses the prompt to fetch relevant messages of texts, e.g. a single message.
-```bash
-python messages.py --query "Thanksgiving plans with Jeff" --k 8 --pretty
-```
-
-d) Pull bounded context per thread
-
-Context argument uses the prompt to fetch relevant threads of texts, e.g. chains of messages in a thread.
-
-```bash
-python messages.py --context "Am I free for Thanksgiving?" --ctx_k 6 --ctx_threads 3 --pretty
-```
-
-### Python API
-
-Use the high-level function `suggest_next_message_from_prompt` to answer questions or generate a pasteable reply.
-
-```python
-from local_mcp.messages import suggest_next_message_from_prompt
-
-result = suggest_next_message_from_prompt(
-    "Someone asked me to hang out on Thanksgiving, draft me a message informing them about my plans if I have any, if not, then let them know I can go.",
-    model="gpt-5-mini",
-    max_tokens=2000,
-)
-print(result)
+# Proactive check (add to crontab)
+python -c "from messages import proactive_message_check; proactive_message_check()"
 ```

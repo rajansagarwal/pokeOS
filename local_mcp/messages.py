@@ -656,5 +656,121 @@ def retrieve_text(
         window=window
     )
 
+def reindex_messages(
+    contacts: str = None,
+    chats: int = RECENT_CHATS,
+    per: int = MESSAGES_PER_CHAT,
+    dbdir: str = DEFAULT_LANCEDB_DIR,
+    table: str = DEFAULT_LANCEDB_TABLE
+) -> Dict[str, Any]:
+    """
+    Reindex recent messages into LanceDB.
+    
+    Args:
+        contacts: Path to contacts cache file (default: uses config default)
+        chats: Number of recent chats to index (default: from config)
+        per: Number of messages per chat to index (default: from config)
+        dbdir: LanceDB directory path (default: from config)
+        table: LanceDB table name (default: from config)
+    
+    Returns:
+        Dict with indexing results including count of indexed messages
+    """
+    if contacts is None:
+        contacts = DEFAULT_CONTACTS
+    
+    try:
+        # Get the LanceDB store
+        store: LanceMemory = get_store(db_dir=dbdir, table_name=table)
+        
+        # Read recent conversations for indexing
+        rows = read_recent_conversations_for_indexing(contacts, chats, per)
+        
+        # Index the messages (skip_existing=True to avoid duplicates)
+        indexed_count = store.upsert(rows, skip_existing=True)
+        
+        return {
+            "success": True,
+            "indexed": indexed_count,
+            "dbdir": dbdir,
+            "table": table,
+            "chats_processed": chats,
+            "messages_per_chat": per,
+            "contacts_file": contacts
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Error during reindexing: {str(e)}",
+            "dbdir": dbdir,
+            "table": table
+        }
+
+def proactive_message_check(hours_without_reply: int = 2) -> Dict[str, Any]:
+    """Check for unreplied messages and send urgent ones to Poke."""
+    from datetime import datetime, timezone, timedelta
+    from openai import OpenAI
+    from .cursor_cli import send_poke_message
+    
+    try:
+        store = _get_store()
+        since_time = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours_without_reply)
+        
+        # Get recent messages
+        recent_results = store.text_search(query="", limit=30, since=since_time, window=1)
+        
+        candidates = []
+        for chat_name, messages in recent_results.items():
+            if not messages:
+                continue
+            
+            # Check if latest message is from someone else and old enough
+            latest_msg = max(messages, key=lambda m: m.get("timestamp", ""))
+            sender = latest_msg.get("sender_name", latest_msg.get("sender", ""))
+            
+            if sender.lower() != "you":  # Not from me
+                try:
+                    msg_time = datetime.fromisoformat(latest_msg.get("timestamp", "").replace("Z", "+00:00"))
+                    if msg_time < cutoff_time:
+                        hours_ago = (datetime.now(timezone.utc) - msg_time).total_seconds() / 3600
+                        candidates.append({
+                            "chat": chat_name,
+                            "sender": sender,
+                            "text": latest_msg.get("text", "")[:150],
+                            "hours_ago": hours_ago
+                        })
+                except:
+                    continue
+        
+        if not candidates:
+            return {"sent": 0, "summary": "No unreplied messages"}
+        
+        # Ask LLM and send to Poke
+        client = OpenAI()
+        sent_count = 0
+        
+        for candidate in candidates[:5]:  # Limit to 5 candidates
+            prompt = f"Should I send this to Poke? Unreplied {candidate['hours_ago']:.1f}h from {candidate['sender']}: \"{candidate['text']}\" Reply YES/NO only."
+            
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    max_tokens=10,
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                
+                if response.choices[0].message.content.strip().upper().startswith("YES"):
+                    poke_msg = f"💬 {candidate['sender']} ({candidate['hours_ago']:.1f}h ago): {candidate['text'][:80]}..."
+                    if send_poke_message(poke_msg):
+                        sent_count += 1
+            except:
+                continue
+        
+        return {"sent": sent_count, "summary": f"Sent {sent_count}/{len(candidates)} to Poke"}
+        
+    except Exception as e:
+        return {"sent": 0, "error": str(e)}
+
 if __name__ == "__main__":
     main()
