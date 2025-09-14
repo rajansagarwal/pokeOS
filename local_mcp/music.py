@@ -18,7 +18,7 @@ def _run_osascript(applescript: str) -> Tuple[str, str, int]:
 
 def play_liked_songs() -> str:
     username = os.getenv("SPOTIFY_USERNAME")
-    if username:
+    if not username:
         return "Error: SPOTIFY_USERNAME not set in environment/.env"
 
     track_uri = f"spotify:user:{username}:collection"
