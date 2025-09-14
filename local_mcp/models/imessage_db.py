@@ -2,15 +2,15 @@ from __future__ import annotations
 import os, re, json, sqlite3, shutil, datetime, pathlib
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
-from lib.config import (
+from ..lib.config import (
     DEFAULT_DB_PATH,
     SNAPSHOT_DIR,
     DEFAULT_CONTACTS,
     RECENT_CHATS,
     MESSAGES_PER_CHAT,
 )
-from lib.time_utils import apple_time_to_dt, dt_to_iso
-from lib.contacts import load_contacts_cache, resolve_name
+from ..lib.time_utils import apple_time_to_dt, dt_to_iso
+from ..lib.contacts import load_contacts_cache, resolve_name
 
 # -------- DB snapshot & open --------
 def snapshot_db(src: str = DEFAULT_DB_PATH, out_dir: str = SNAPSHOT_DIR) -> str:

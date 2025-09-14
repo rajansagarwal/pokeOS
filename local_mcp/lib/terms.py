@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json, re
 from typing import List, Set
-from lib.log import debug
+from .log import debug
 
 _TERM_STOP = {
     "the","and","but","with","from","that","this","for","you","your","me","him","her",

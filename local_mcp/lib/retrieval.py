@@ -1,8 +1,8 @@
 from __future__ import annotations
 from typing import Any, Dict, List
-from lib.text_utils import clean_text_artifacts
-from lib.terms import gen_terms_llm
-from lib.log import debug
+from .text_utils import clean_text_artifacts
+from .terms import gen_terms_llm
+from .log import debug
 
 def gather_topic_evidence(store, task: str, *, retriever_model: str) -> List[Dict[str,Any]]:
     """

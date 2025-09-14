@@ -10,19 +10,19 @@ if not os.getenv("OPENAI_API_KEY"):
     raise SystemExit("Set OPENAI_API_KEY in .env")
 
 # Local imports
-from lib.config import (
+from .lib.config import (
     DEFAULT_CONTACTS,
     DEFAULT_LANCEDB_DIR,
     DEFAULT_LANCEDB_TABLE,
     RECENT_CHATS,
     MESSAGES_PER_CHAT,
 )
-from lib.prompts import SUGGEST_SYSTEM_PROMPT_V2
-from lib.prompt_utils import is_question
-from lib.text_utils import text_friendly
-from lib.retrieval import gather_topic_evidence
-from models.memory import get_store, LanceMemory
-from models.imessage_db import (
+from .lib.prompts import SUGGEST_SYSTEM_PROMPT_V2
+from .lib.prompt_utils import is_question
+from .lib.text_utils import text_friendly
+from .lib.retrieval import gather_topic_evidence
+from .models.memory import get_store, LanceMemory
+from .models.imessage_db import (
     read_recent_conversations_json,
     read_recent_conversations_for_indexing,
 )

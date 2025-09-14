@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os, re, datetime
 from typing import Any, Dict, List, Optional
-from lib.config import DEFAULT_LANCEDB_DIR, DEFAULT_LANCEDB_TABLE
+from ..lib.config import DEFAULT_LANCEDB_DIR, DEFAULT_LANCEDB_TABLE
 from .embedder import OpenAIEmbedder
 
 def _escape_sql(s: str) -> str:
