@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 import os
+from typing import Optional
 from fastmcp import FastMCP
 from local_mcp.computeruse import send_to_nova
 from local_mcp.cursor_background import launch_agent, get_agent_status, get_agent_conversation, add_agent_followup, list_repositories, run_agent, check_agent, send_followup, show_conversation, show_repos
 from local_mcp.music import play_liked_songs as _play_liked_songs
 from local_mcp.cursor_cli import send_poke_message, run_command, run_cursor_agent, list_files, cat_file
+from local_mcp.messages import retrieve_text, suggest_next_message_from_prompt, _get_store
 import dotenv
 
 dotenv.load_dotenv()
@@ -100,6 +102,94 @@ def list_project_files() -> str:
 @mcp.tool(description="Open Spotify and play Liked Songs for SPOTIFY_USERNAME")
 def play_spotify_liked_songs() -> str:
     return _play_liked_songs()
+
+@mcp.tool(description="Retrieve messages using text search functionality. Returns messages grouped by chat that contain the query text.")
+def retrieve_messages_text(
+    query: str,
+    limit: int = 20,
+    chat: Optional[str] = None,
+    sender: Optional[str] = None,
+    since: Optional[str] = None,
+    until: Optional[str] = None,
+    window: int = 0
+) -> dict:
+    """
+    Retrieve messages using text search functionality.
+    
+    Args:
+        query: The text to search for
+        limit: Maximum number of results (default: 20)
+        chat: Filter by specific chat name (optional)
+        sender: Filter by specific sender (optional)
+        since: ISO timestamp for lower bound (optional)
+        until: ISO timestamp for upper bound (optional)
+        window: Include N messages before/after each hit (default: 0)
+    """
+    try:
+        results = retrieve_text(
+            query=query,
+            limit=limit,
+            chat=chat,
+            sender=sender,
+            since=since,
+            until=until,
+            window=window
+        )
+        return results
+    except Exception as e:
+        return {"error": f"Error retrieving messages: {str(e)}"}
+
+@mcp.tool(description="Suggest next message from prompt using context from previous conversations.")
+def suggest_message_context(
+    user_prompt: str,
+    model: str = "gpt-4o-mini",
+    temperature: float = 0.2,
+    max_tokens: int = 220
+) -> dict:
+    """
+    Suggest next message from prompt using context from previous conversations.
+    
+    Args:
+        user_prompt: The prompt to generate a response for
+        model: LLM model to use (default: gpt-4o-mini)
+        temperature: Generation temperature (default: 0.2)
+        max_tokens: Maximum tokens in response (default: 220)
+    """
+    try:
+        result = suggest_next_message_from_prompt(
+            user_prompt=user_prompt,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        return result
+    except Exception as e:
+        return {"error": f"Error generating message suggestion: {str(e)}"}
+
+@mcp.tool(description="Pull relevant context (grouped by chat) for a given prompt using semantic search.")
+def get_relevant_context(
+    prompt: str,
+    k_per_thread: int = 6,
+    max_threads: int = 3
+) -> dict:
+    """
+    Pull relevant context (grouped by chat) for a given prompt.
+    
+    Args:
+        prompt: The prompt to find relevant context for
+        k_per_thread: Messages per thread to return (default: 6)
+        max_threads: Maximum threads to return (default: 3)
+    """
+    try:
+        store = _get_store()
+        context = store.relevant_context(
+            prompt=prompt,
+            k_per_thread=k_per_thread,
+            max_threads=max_threads
+        )
+        return {"context": context}
+    except Exception as e:
+        return {"error": f"Error retrieving context: {str(e)}"}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
