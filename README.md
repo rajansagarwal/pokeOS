@@ -1,7 +1,6 @@
 # poke-desktop
 
-## Messages
-
+### Poke for iMessage
 
 Snapshot your local iMessage DB, index recent chats into LanceDB (OpenAI embeddings), and **answer questions or draft paste-ready replies**. 
 
