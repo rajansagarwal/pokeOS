@@ -3,6 +3,7 @@ import os
 from fastmcp import FastMCP
 from local_mcp.computeruse import send_to_nova
 from local_mcp.cursor_background import launch_agent, get_agent_status, get_agent_conversation, add_agent_followup, list_repositories, run_agent, check_agent, send_followup, show_conversation, show_repos
+from local_mcp.music import play_liked_songs as _play_liked_songs
 from local_mcp.cursor_cli import send_poke_message, run_command, run_cursor_agent, list_files, cat_file
 import dotenv
 
@@ -95,6 +96,10 @@ def read_file_contents(file_path: str) -> str:
 def list_project_files() -> str:
     WORKING_DIRECTORY = os.getenv("WORKING_DIRECTORY")
     return list_files(WORKING_DIRECTORY)
+
+@mcp.tool(description="Open Spotify and play Liked Songs for SPOTIFY_USERNAME")
+def play_spotify_liked_songs() -> str:
+    return _play_liked_songs()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
