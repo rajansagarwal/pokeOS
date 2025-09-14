@@ -16,5 +16,22 @@ To run the script, use the following command:
 python local_mcp/messages.py
 ```
 
-The script will output a JSON file containing the recent messages for each chat.
+The script will output a JSON file containing the recent messages for each chat (this will output a lot of data, so you may want to limit the number of chats and messages per chat).
+
+Use the args to control the data you want to receive. Example use cases are:
+
+```bash
+python messages.py --text "yo" --limit 5
+```
+
+```bash
+python msg_withvec_llm.py --context "coordinate with Rajan about an nyc trip" --ctx_k 6 --ctx_threads 3 --dbdir ~/.chat_memdb --table messages
+```
+
+To index the messages, use the following command:
+
+```bash
+python msg_withvec_llm.py --index --dbdir ~/.chat_memdb --contacts ~/.contacts_cache.txt
+```
+
 
