@@ -2,50 +2,101 @@
 
 ### Poke for iMessage
 
+Snapshot your local iMessage DB, index recent chats into LanceDB (OpenAI embeddings), and **answer questions or draft paste-ready replies**. 
+
 The `local_mcp` directory contains a Python script that reads recent messages from the Messages database and converts them into a JSON format that can be used by the MCP. The script uses a contacts cache to resolve phone numbers and email addresses to names.
 
-Make sure to create your venv and install the requirements.txt file.
-
-The script is based on the `contacts_cache_dump.py` script located in the local_mcp/lib directory. You must first run the following to store a local copy of your contacts on your filesystem.
+### Setup
 
 ```bash
-python3 local_mcp/lib/contacts_cache_dump.py
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-To run the script, use the following command:
+### Permissions
+
+You will need to make sure that your IDE/Terminal has Full Disk Access permissions to access the iMessage database. You can do this by going to System Settings > Security & Privacy > Privacy > Full Disk Access and adding your IDE/Terminal to the list.
+
+Additionally, if you're using the Contacts Cache, you will need to make sure that your IDE/Terminal has access to your Contacts.
+
+### Contacts Cache
+
+To map phone/emails → names, create ~/.contacts_cache.txt using the `contacts_cache_dump.py` script located in the local_mcp/scripts directory. You must first run the following to store a local copy of your contacts on your filesystem.
 
 ```bash
-python local_mcp/messages.py
+python3 local_mcp/scripts/contacts_cache_dump.py
 ```
 
-The script will output a JSON file containing the recent messages for each chat (this will output a lot of data, so you may want to limit the number of chats and messages per chat).
+If missing, results still work, senders just appear as raw handles.
 
-Use the args to control the data you want to receive. Example use cases are:
+### First Run
+
+Index recent iMessage history to LanceDB (with optional arguments):
 
 ```bash
-python messages.py --text "yo" --limit 5
+python messages.py \
+  --index \
+  --chats 40 \
+  --per 60 \
+  --dbdir ~/.chat_memdb \
+  --table messages
 ```
+
+This snapshots `~/Library/Messages/chat.db` into `~/Library/Messages/_snapshots/` and upserts into `~/.chat_memdb`.
+
+### CLI Usage
+
+> Note: All commands accept --pretty for pretty-printed JSON.
+
+a) Dump recent conversations (no DB needed)
 
 ```bash
-python messages.py --context "coordinate with Rajan about an nyc trip" --ctx_k 6 --ctx_threads 3 --dbdir ~/.chat_memdb --table messages
+python messages.py --pretty > recent.json
 ```
 
-Context: uses the prompt to fetch relevant threads of texts so like a chain of messages/multiple messages
-```bash
-python messages.py --context "coordinate with Rajan about an nyc trip" --ctx_threads 2 --ctx_k 8
-```
-
-Query: uses the prompt to fetch relevant messages of texts so like a single message
-```bash
-python messages.py --query "nyc trip with rajan" --k 5 --pretty
-```
-
-To index the messages, use the following command:
+b) Plain substring search (exact, case-insensitive)
 
 ```bash
-python messages.py --index --dbdir ~/.chat_memdb
+# Find "Thanksgiving" with small context window
+python messages.py --text "Thanksgiving" --window 2 --pretty
+
+# Filter by chat and time range
+python messages.py \
+  --text "Turkey" \
+  --inchat "Random Groupchat" \
+  --since 2025-09-01 \
+  --until 2025-09-30 \
+  --window 3 \
+  --pretty
 ```
 
-Note that this creates a new snapshot of the chat.db iMessage database and stores it in the ~/.chat_memdb directory. 
+c) Semantic search (embedding similarity)
 
+Query argument uses the prompt to fetch relevant messages of texts, e.g. a single message.
+```bash
+python messages.py --query "Thanksgiving plans with Jeff" --k 8 --pretty
+```
 
+d) Pull bounded context per thread
+
+Context argument uses the prompt to fetch relevant threads of texts, e.g. chains of messages in a thread.
+
+```bash
+python messages.py --context "Am I free for Thanksgiving?" --ctx_k 6 --ctx_threads 3 --pretty
+```
+
+### Python API
+
+Use the high-level function `suggest_next_message_from_prompt` to answer questions or generate a pasteable reply.
+
+```python
+from local_mcp.messages import suggest_next_message_from_prompt
+
+result = suggest_next_message_from_prompt(
+    "Someone asked me to hang out on Thanksgiving, draft me a message informing them about my plans if I have any, if not, then let them know I can go.",
+    model="gpt-5-mini",
+    max_tokens=2000,
+)
+print(result)
+```
