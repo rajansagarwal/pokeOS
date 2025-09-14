@@ -44,4 +44,6 @@ To index the messages, use the following command:
 python messages.py --index --dbdir ~/.chat_memdb --contacts ~/.contacts_cache.txt
 ```
 
+Note that this creates a new snapshot of the chat.db iMessage database and stores it in the ~/.chat_memdb directory. 
+
 
